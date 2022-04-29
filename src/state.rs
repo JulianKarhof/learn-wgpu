@@ -30,23 +30,19 @@ struct Vertex {
 
 const VERTICES: &[Vertex] = &[
     Vertex {
-        position: [-0.0868241, 0.49240386, 0.0],
+        position: [0.0, 0.0, 0.0],
         color: [0.5, 0.0, 0.5],
     },
     Vertex {
-        position: [-0.49513406, 0.06958647, 0.0],
+        position: [0.0, 500.0, 0.0],
         color: [0.5, 0.0, 0.5],
     },
     Vertex {
-        position: [-0.21918549, -0.44939706, 0.0],
+        position: [500.0, 500.0, 0.0],
         color: [0.5, 0.0, 0.5],
     },
     Vertex {
-        position: [0.35966998, -0.3473291, 0.0],
-        color: [0.5, 0.0, 0.5],
-    },
-    Vertex {
-        position: [0.44147372, 0.2347359, 0.0],
+        position: [500.0, 500.0, 0.0],
         color: [0.5, 0.0, 0.5],
     },
 ];
@@ -54,9 +50,7 @@ const VERTICES: &[Vertex] = &[
 
 #[rustfmt::skip]
 const INDICES: &[u16] = &[
-    0, 1, 4,
-    1, 2, 4,
-    2, 3, 4
+    0, 1, 2,
 ];
 
 impl Vertex {
@@ -151,10 +145,8 @@ impl State {
             eye: (0.0, 1.0, 2.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: cgmath::Vector3::unit_y(),
-            aspect: config.width as f32 / config.height as f32,
-            fovy: 45.0,
-            znear: 0.1,
-            zfar: 100.0,
+            height: config.height as f32,
+            width: config.width as f32,
         };
 
         let mut camera_uniform = CameraUniform::new();
@@ -257,6 +249,9 @@ impl State {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
+
+            self.camera.height = new_size.height as f32;
+            self.camera.width = new_size.width as f32;
         }
     }
 
