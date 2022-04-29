@@ -42,7 +42,7 @@ const VERTICES: &[Vertex] = &[
         color: [0.5, 0.0, 0.5],
     },
     Vertex {
-        position: [500.0, 500.0, 0.0],
+        position: [500.0, 0.0, 0.0],
         color: [0.5, 0.0, 0.5],
     },
 ];
@@ -51,6 +51,7 @@ const VERTICES: &[Vertex] = &[
 #[rustfmt::skip]
 const INDICES: &[u16] = &[
     0, 1, 2,
+    2, 3, 0
 ];
 
 impl Vertex {
@@ -252,6 +253,13 @@ impl State {
 
             self.camera.height = new_size.height as f32;
             self.camera.width = new_size.width as f32;
+        
+            self.camera_uniform.update_view_proj(&self.camera);
+            self.queue.write_buffer(
+                &self.camera_buffer,
+                0,
+                bytemuck::cast_slice(&[self.camera_uniform]),
+            );
         }
     }
 
@@ -280,7 +288,8 @@ impl State {
         }
     }
 
-    pub fn update(&mut self) {}
+    pub fn update(&mut self) {
+    }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
