@@ -31,11 +31,11 @@ struct Vertex {
 const VERTICES: &[Vertex] = &[
     Vertex {
         position: [0.0, 0.0, 0.0],
-        color: [0.5, 0.0, 0.5],
+        color: [0.5, 0.0, 0.0],
     },
     Vertex {
         position: [0.0, 500.0, 0.0],
-        color: [0.5, 0.0, 0.5],
+        color: [0.0, 0.5, 0.0],
     },
     Vertex {
         position: [500.0, 500.0, 0.0],
@@ -43,10 +43,9 @@ const VERTICES: &[Vertex] = &[
     },
     Vertex {
         position: [500.0, 0.0, 0.0],
-        color: [0.5, 0.0, 0.5],
+        color: [0.0, 0.0, 0.0],
     },
 ];
-
 
 #[rustfmt::skip]
 const INDICES: &[u16] = &[
@@ -143,9 +142,6 @@ impl State {
         let num_vertices = VERTICES.len() as u32;
 
         let camera = Camera {
-            eye: (0.0, 1.0, 2.0).into(),
-            target: (0.0, 0.0, 0.0).into(),
-            up: cgmath::Vector3::unit_y(),
             height: config.height as f32,
             width: config.width as f32,
         };
@@ -253,7 +249,7 @@ impl State {
 
             self.camera.height = new_size.height as f32;
             self.camera.width = new_size.width as f32;
-        
+
             self.camera_uniform.update_view_proj(&self.camera);
             self.queue.write_buffer(
                 &self.camera_buffer,
@@ -288,8 +284,7 @@ impl State {
         }
     }
 
-    pub fn update(&mut self) {
-    }
+    pub fn update(&mut self) {}
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;

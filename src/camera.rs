@@ -1,7 +1,4 @@
 pub struct Camera {
-    pub eye: cgmath::Point3<f32>,
-    pub target: cgmath::Point3<f32>,
-    pub up: cgmath::Vector3<f32>,
     pub width: f32,
     pub height: f32,
 }
