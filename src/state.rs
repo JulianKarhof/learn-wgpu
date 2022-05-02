@@ -1,24 +1,31 @@
+use cgmath::{prelude::*, Deg, Euler};
 use wgpu::util::DeviceExt;
 use winit::{event::WindowEvent, window::Window};
 
 use crate::camera::{Camera, CameraUniform};
+use crate::instance::{Instance, InstanceRaw};
 
 pub struct State {
-    pub surface: wgpu::Surface,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
-    pub config: wgpu::SurfaceConfiguration,
+    surface: wgpu::Surface,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
-    pub render_pipeline: wgpu::RenderPipeline,
-    pub clear_color: wgpu::Color,
-    pub vertex_buffer: wgpu::Buffer,
-    pub num_vertices: u32,
-    pub index_buffer: wgpu::Buffer,
-    pub num_indices: u32,
-    pub camera: Camera,
-    pub camera_uniform: CameraUniform,
-    pub camera_buffer: wgpu::Buffer,
-    pub camera_bind_group: wgpu::BindGroup,
+    render_pipeline: wgpu::RenderPipeline,
+    clear_color: wgpu::Color,
+
+    vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
+    num_indices: u32,
+    num_vertices: u32,
+
+    camera: Camera,
+    camera_uniform: CameraUniform,
+    camera_buffer: wgpu::Buffer,
+    camera_bind_group: wgpu::BindGroup,
+
+    instances: Vec<Instance>,
+    instance_buffer: wgpu::Buffer,
 }
 
 #[repr(C)]
@@ -34,15 +41,15 @@ const VERTICES: &[Vertex] = &[
         color: [0.5, 0.0, 0.0],
     },
     Vertex {
-        position: [0.0, 500.0, 0.0],
+        position: [0.0, 50.0, 0.0],
         color: [0.0, 0.5, 0.0],
     },
     Vertex {
-        position: [500.0, 500.0, 0.0],
+        position: [50.0, 50.0, 0.0],
         color: [0.5, 0.0, 0.5],
     },
     Vertex {
-        position: [500.0, 0.0, 0.0],
+        position: [50.0, 0.0, 0.0],
         color: [0.0, 0.0, 0.0],
     },
 ];
@@ -52,6 +59,16 @@ const INDICES: &[u16] = &[
     0, 1, 2,
     2, 3, 0
 ];
+
+pub struct Quad {
+    pub width: f32,
+    pub height: f32,
+    pub position: [i32; 2],
+}
+
+impl Quad {
+    pub fn new(&self) {}
+}
 
 impl Vertex {
     fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
@@ -192,7 +209,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[Vertex::desc()],
+                buffers: &[Vertex::desc(), InstanceRaw::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -221,6 +238,36 @@ impl State {
             multiview: None,
         });
 
+        const NUM_INSTANCES_PER_ROW: u32 = 10;
+        const INSTANCE_DISPLACEMENT: f32 = NUM_INSTANCES_PER_ROW as f32 * 6.0;
+
+        let instances = (0..NUM_INSTANCES_PER_ROW)
+            .flat_map(|x| {
+                (0..NUM_INSTANCES_PER_ROW).map(move |y| {
+                    let position = cgmath::Vector3 {
+                        x: x as f32,
+                        y: y as f32,
+                        z: 0.0,
+                    } * INSTANCE_DISPLACEMENT;
+
+                    let rotation = cgmath::Quaternion::from(Euler {
+                        x: Deg(0.0),
+                        y: Deg(0.0),
+                        z: Deg(20.0),
+                    });
+
+                    return Instance { position, rotation };
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&instance_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
         Self {
             surface,
             device,
@@ -237,6 +284,8 @@ impl State {
             camera_bind_group,
             camera_buffer,
             camera_uniform,
+            instances,
+            instance_buffer,
         }
     }
 
@@ -312,9 +361,12 @@ impl State {
 
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+
+        render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
 
         drop(render_pass);
 
