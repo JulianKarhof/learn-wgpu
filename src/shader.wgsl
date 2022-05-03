@@ -1,5 +1,3 @@
-// Vertex shader
-
 struct InstanceInput {
     [[location(5)]] model_matrix_0: vec4<f32>;
     [[location(6)]] model_matrix_1: vec4<f32>;
@@ -43,8 +41,6 @@ fn vs_main(
     out.local = model.local;
     return out;
 }
-
-// Fragment shader
 
 [[stage(fragment)]]
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {

@@ -4,6 +4,7 @@ use winit::{event::WindowEvent, window::Window};
 
 use crate::camera::{Camera, CameraUniform};
 use crate::instance::{Instance, InstanceRaw};
+use crate::rect::RectPipeline;
 
 pub struct State {
     surface: wgpu::Surface,
@@ -26,6 +27,8 @@ pub struct State {
 
     instances: Vec<Instance>,
     instance_buffer: wgpu::Buffer,
+
+    rect_pipeline: RectPipeline,
 }
 
 #[repr(C)]
@@ -59,7 +62,7 @@ const VERTICES: &[Vertex] = &[
     },
 ];
 
-#[rustfmt::skiplocal]
+#[rustfmt::skip]
 const INDICES: &[u16] = &[
     0, 1, 2,
     2, 3, 0
@@ -238,15 +241,15 @@ impl State {
             multiview: None,
         });
 
-        const NUM_INSTANCES_PER_ROW: u32 = 1;
-        const INSTANCE_DISPLACEMENT: f32 = NUM_INSTANCES_PER_ROW as f32 * 160.0;
+        const NUM_INSTANCES_PER_ROW: u32 = 10;
+        const INSTANCE_DISPLACEMENT: f32 = NUM_INSTANCES_PER_ROW as f32 * 60.0;
 
         let instances = (0..NUM_INSTANCES_PER_ROW)
             .flat_map(|x| {
                 (0..NUM_INSTANCES_PER_ROW).map(move |y| {
                     let position = cgmath::Vector3 {
-                        x: x as f32 + 1.0,
-                        y: y as f32 + 1.0,
+                        x: x as f32,
+                        y: y as f32,
                         z: 0.0,
                     } * INSTANCE_DISPLACEMENT;
 
@@ -268,6 +271,8 @@ impl State {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
+        let rect_pipeline = RectPipeline::new(&device, &camera_bind_group_layout, &config);
+
         Self {
             surface,
             device,
@@ -286,6 +291,7 @@ impl State {
             camera_uniform,
             instances,
             instance_buffer,
+            rect_pipeline,
         }
     }
 
@@ -358,6 +364,9 @@ impl State {
             }],
             depth_stencil_attachment: None,
         });
+
+        self.rect_pipeline
+            .render(&mut render_pass, &self.camera_bind_group);
 
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
