@@ -1,4 +1,4 @@
-use cgmath::{prelude::*, Deg, Euler};
+use cgmath::{Deg, Euler};
 use wgpu::util::DeviceExt;
 use winit::{event::WindowEvent, window::Window};
 
@@ -17,7 +17,7 @@ pub struct State {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    num_vertices: u32,
+    pub num_vertices: u32,
 
     camera: Camera,
     camera_uniform: CameraUniform,
@@ -33,42 +33,37 @@ pub struct State {
 struct Vertex {
     position: [f32; 3],
     color: [f32; 3],
+    local: [f32; 2],
 }
 
 const VERTICES: &[Vertex] = &[
     Vertex {
         position: [0.0, 0.0, 0.0],
-        color: [0.5, 0.0, 0.0],
+        color: [0.0, 0.88, 0.71],
+        local: [-1.0, -1.0],
     },
     Vertex {
-        position: [0.0, 50.0, 0.0],
-        color: [0.0, 0.5, 0.0],
+        position: [0.0, 500.0, 0.0],
+        color: [0.0, 0.88, 0.71],
+        local: [-1.0, 1.0],
     },
     Vertex {
-        position: [50.0, 50.0, 0.0],
-        color: [0.5, 0.0, 0.5],
+        position: [500.0, 500.0, 0.0],
+        color: [0.0, 0.88, 0.71],
+        local: [1.0, 1.0],
     },
     Vertex {
-        position: [50.0, 0.0, 0.0],
-        color: [0.0, 0.0, 0.0],
+        position: [500.0, 0.0, 0.0],
+        color: [0.0, 1.0, 0.081],
+        local: [1.0, -1.0],
     },
 ];
 
-#[rustfmt::skip]
+#[rustfmt::skiplocal]
 const INDICES: &[u16] = &[
     0, 1, 2,
     2, 3, 0
 ];
-
-pub struct Quad {
-    pub width: f32,
-    pub height: f32,
-    pub position: [i32; 2],
-}
-
-impl Quad {
-    pub fn new(&self) {}
-}
 
 impl Vertex {
     fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
@@ -85,6 +80,11 @@ impl Vertex {
                     offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x3,
+                },
+                wgpu::VertexAttribute {
+                    offset: std::mem::size_of::<[f32; 6]>() as wgpu::BufferAddress,
+                    shader_location: 2,
+                    format: wgpu::VertexFormat::Float32x2,
                 },
             ],
         }
@@ -216,7 +216,7 @@ impl State {
                 entry_point: "fs_main",
                 targets: &[wgpu::ColorTargetState {
                     format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE),
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 }],
             }),
@@ -238,22 +238,22 @@ impl State {
             multiview: None,
         });
 
-        const NUM_INSTANCES_PER_ROW: u32 = 10;
-        const INSTANCE_DISPLACEMENT: f32 = NUM_INSTANCES_PER_ROW as f32 * 6.0;
+        const NUM_INSTANCES_PER_ROW: u32 = 1;
+        const INSTANCE_DISPLACEMENT: f32 = NUM_INSTANCES_PER_ROW as f32 * 160.0;
 
         let instances = (0..NUM_INSTANCES_PER_ROW)
             .flat_map(|x| {
                 (0..NUM_INSTANCES_PER_ROW).map(move |y| {
                     let position = cgmath::Vector3 {
-                        x: x as f32,
-                        y: y as f32,
+                        x: x as f32 + 1.0,
+                        y: y as f32 + 1.0,
                         z: 0.0,
                     } * INSTANCE_DISPLACEMENT;
 
                     let rotation = cgmath::Quaternion::from(Euler {
                         x: Deg(0.0),
                         y: Deg(0.0),
-                        z: Deg(20.0),
+                        z: Deg(0.0),
                     });
 
                     return Instance { position, rotation };
