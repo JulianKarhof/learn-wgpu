@@ -5,7 +5,6 @@ use winit::{
 };
 
 mod camera;
-mod instance;
 mod rect;
 mod state;
 
