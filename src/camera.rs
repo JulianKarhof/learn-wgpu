@@ -1,23 +1,38 @@
+use winit::dpi::PhysicalPosition;
+
 pub struct Camera {
     pub width: f32,
     pub height: f32,
+    pub offset: PhysicalPosition<f32>,
+    pub zoom: f32,
+    pub weight: Weight,
+}
+
+pub struct Weight {
+    pub top: f32,
+    pub left: f32,
+    pub right: f32,
+    pub kjell: f32,
 }
 
 impl Camera {
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        let proj = cgmath::ortho(0.0, self.width, self.height, 0.0, 2.0, 0.0);
+        let proj = cgmath::ortho(
+            0.0 * self.zoom * self.weight.left + self.offset.x * self.zoom,
+            self.width * self.zoom * self.weight.right + self.offset.x * self.zoom,
+            self.height * self.zoom * self.weight.top + self.offset.y * self.zoom,
+            0.0 * self.zoom * self.weight.kjell + self.offset.y * self.zoom,
+            2.0,
+            0.0,
+        );
 
         return proj;
     }
 }
 
-// We need this for Rust to store our data correctly for the shaders
 #[repr(C)]
-// This is so we can store this in a buffer
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform {
-    // We can't use cgmath with bytemuck directly so we'll have
-    // to convert the Matrix4 into a 4x4 f32 array
     view_proj: [[f32; 4]; 4],
 }
 

@@ -5,6 +5,7 @@ use winit::{
 };
 
 mod camera;
+mod circle;
 mod rect;
 mod state;
 
@@ -30,7 +31,7 @@ pub async fn run() {
         // Winit prevents sizing with CSS, so we have to set
         // the size manually when on web.
         use winit::dpi::PhysicalSize;
-        window.set_inner_size(PhysicalSize::new(1000, 1000));
+        window.set_inner_size(PhysicalSize::new(3200, 1700));
 
         use winit::platform::web::WindowExtWebSys;
         web_sys::window()

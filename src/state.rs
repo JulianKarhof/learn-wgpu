@@ -1,7 +1,11 @@
+use cgmath::num_traits::ToPrimitive;
 use wgpu::util::DeviceExt;
+use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::event::{ElementState, MouseButton, MouseScrollDelta};
 use winit::{event::WindowEvent, window::Window};
 
-use crate::camera::{Camera, CameraUniform};
+use crate::camera::{Camera, CameraUniform, Weight};
+use crate::circle::CirclePipeline;
 use crate::rect::RectPipeline;
 
 pub struct State {
@@ -19,6 +23,10 @@ pub struct State {
     camera_bind_group: wgpu::BindGroup,
 
     rect_pipeline: RectPipeline,
+    circle_pipeline: CirclePipeline,
+
+    last_cursor_position: PhysicalPosition<f64>,
+    mouse_pressed: bool,
 }
 
 impl State {
@@ -71,6 +79,14 @@ impl State {
         let camera = Camera {
             height: config.height as f32,
             width: config.width as f32,
+            offset: PhysicalPosition { x: 0.0, y: 0.0 },
+            zoom: 1.0,
+            weight: Weight {
+                top: 0.5,
+                left: 0.5,
+                right: 0.5,
+                kjell: 0.5,
+            },
         };
 
         let mut camera_uniform = CameraUniform::new();
@@ -107,6 +123,9 @@ impl State {
         });
 
         let rect_pipeline = RectPipeline::new(&device, &camera_bind_group_layout, &config);
+        let circle_pipeline = CirclePipeline::new(&device, &camera_bind_group_layout, &config);
+
+        let last_cursor_position = PhysicalPosition::new(0.0, 0.0);
 
         Self {
             surface,
@@ -120,6 +139,9 @@ impl State {
             camera_buffer,
             camera_uniform,
             rect_pipeline,
+            circle_pipeline,
+            last_cursor_position,
+            mouse_pressed: false,
         }
     }
 
@@ -144,25 +166,79 @@ impl State {
 
     pub fn input(&mut self, event: &WindowEvent) -> bool {
         match event {
-            WindowEvent::CursorMoved { position, .. } => {
-                self.clear_color = wgpu::Color {
-                    r: position.x as f64 / self.size.width as f64,
-                    g: position.y as f64 / self.size.height as f64,
-                    b: 1.0,
-                    a: 1.0,
+            WindowEvent::MouseWheel { delta, .. } => {
+                match delta {
+                    MouseScrollDelta::PixelDelta(PhysicalPosition { x: _, y }) => {
+                        self.camera.zoom += y.to_f32().unwrap() * 0.01;
+                        self.camera.zoom = self.camera.zoom.clamp(0.5, 10.0);
+
+                        self.camera_uniform.update_view_proj(&self.camera);
+                        self.queue.write_buffer(
+                            &self.camera_buffer,
+                            0,
+                            bytemuck::cast_slice(&[self.camera_uniform]),
+                        );
+                    }
+                    _ => {}
                 };
 
-                true
+                return true;
+            }
+
+            WindowEvent::MouseInput { button, state, .. } => {
+                if *button == MouseButton::Left {
+                    if *state == ElementState::Released {
+                        self.mouse_pressed = false;
+                    }
+
+                    if *state == ElementState::Pressed {
+                        self.mouse_pressed = true;
+                    }
+                }
+
+                return true;
+            }
+
+            WindowEvent::CursorMoved { position, .. } => {
+                if self.mouse_pressed {
+                    let difference: PhysicalPosition<f32> = PhysicalPosition {
+                        x: self.last_cursor_position.x.to_f32().unwrap()
+                            - position.x.to_f32().unwrap(),
+                        y: self.last_cursor_position.y.to_f32().unwrap()
+                            - position.y.to_f32().unwrap(),
+                    };
+
+                    self.camera.offset.x += difference.x;
+                    self.camera.offset.y += difference.y;
+
+                    // self.camera.weight = Weight {
+                    //     top: position.y.to_f32().unwrap() / self.config.height as f32,
+                    //     left: position.x.to_f32().unwrap() / self.config.width as f32,
+                    //     right: 1.0 - position.x.to_f32().unwrap() / self.config.width as f32,
+                    //     kjell: 1.0 - position.y.to_f32().unwrap() / self.config.height as f32,
+                    // };
+
+                    self.camera_uniform.update_view_proj(&self.camera);
+                    self.queue.write_buffer(
+                        &self.camera_buffer,
+                        0,
+                        bytemuck::cast_slice(&[self.camera_uniform]),
+                    );
+                }
+
+                self.last_cursor_position = *position;
+
+                return true;
             }
             _ => {
                 self.clear_color = wgpu::Color {
                     r: 0.01,
                     g: 0.01,
-                    b: 0.01,
+                    b: 0.1,
                     a: 1.0,
                 };
 
-                false
+                return false;
             }
         }
     }
@@ -194,6 +270,9 @@ impl State {
         });
 
         self.rect_pipeline
+            .render(&mut render_pass, &self.camera_bind_group);
+
+        self.circle_pipeline
             .render(&mut render_pass, &self.camera_bind_group);
 
         drop(render_pass);

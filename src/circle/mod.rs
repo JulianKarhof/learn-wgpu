@@ -2,12 +2,12 @@ use wgpu::{
     util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device, RenderPass, RenderPipeline,
     SurfaceConfiguration,
 };
-mod rect;
-pub use rect::Rect;
+mod circle;
+pub use circle::Circle;
 
-pub struct RectPipeline {
+pub struct CirclePipeline {
     render_pipeline: RenderPipeline,
-    instances: Vec<Rect>,
+    instances: Vec<Circle>,
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     instance_buffer: Buffer,
@@ -54,15 +54,15 @@ impl Vertex {
     }
 }
 
-impl<'a> RectPipeline {
+impl<'a> CirclePipeline {
     pub fn new(
         device: &Device,
         bind_group_layout: &BindGroupLayout,
         config: &SurfaceConfiguration,
     ) -> Self {
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: Some("Rect Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("rect.wgsl").into()),
+            label: Some("Circle Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("circle.wgsl").into()),
         });
 
         let render_pipeline_layout =
@@ -73,12 +73,12 @@ impl<'a> RectPipeline {
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Rect Render Pipeline"),
+            label: Some("Circle Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[Vertex::desc(), Rect::layout(&Rect::attributes())],
+                buffers: &[Vertex::desc(), Circle::layout(&Circle::attributes())],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -108,29 +108,29 @@ impl<'a> RectPipeline {
         });
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Rect Vertex Buffer"),
+            label: Some("Circle Vertex Buffer"),
             contents: bytemuck::cast_slice(VERTICES),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
         let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Rect Index Buffer"),
+            label: Some("Circle Index Buffer"),
             contents: bytemuck::cast_slice(INDICES),
             usage: wgpu::BufferUsages::INDEX,
         });
 
         let instances = (0..10)
             .map(move |x| {
-                let mut rect = Rect::default();
-                rect.position = [220.0 * x as f32, 200.0];
-                rect.color = [0.0, 1.0, 0.0, 1.0];
-                return rect;
+                let mut circle = Circle::default();
+                circle.position = [220.0 * x as f32, 420.0];
+                circle.color = [0.0, 1.0, 0.0, 1.0];
+                return circle;
             })
             .collect::<Vec<_>>();
 
         let instance_data = instances.as_slice();
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Rect Instance Buffer"),
+            label: Some("Instance Buffer"),
             contents: bytemuck::cast_slice(&instance_data),
             usage: wgpu::BufferUsages::VERTEX,
         });
