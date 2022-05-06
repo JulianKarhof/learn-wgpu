@@ -8,6 +8,8 @@ pub struct Camera {
     pub weight: Weight,
 }
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct Weight {
     pub top: f32,
     pub left: f32,
@@ -17,11 +19,16 @@ pub struct Weight {
 
 impl Camera {
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
+        let top = self.offset.y;
+        let bottom = self.offset.y + self.height;
+        let left = self.offset.x;
+        let right = self.offset.x + self.width;
+
         let proj = cgmath::ortho(
-            0.0 * self.zoom * self.weight.left + self.offset.x * self.zoom,
-            self.width * self.zoom * self.weight.right + self.offset.x * self.zoom,
-            self.height * self.zoom * self.weight.top + self.offset.y * self.zoom,
-            0.0 * self.zoom * self.weight.kjell + self.offset.y * self.zoom,
+            left + ((right - left) * self.weight.left) * self.zoom,
+            right - ((right - left) * self.weight.right) * self.zoom,
+            bottom - ((bottom - top) * self.weight.kjell) * self.zoom,
+            top + ((bottom - top) * self.weight.top) * self.zoom,
             2.0,
             0.0,
         );

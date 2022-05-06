@@ -27,6 +27,7 @@ pub struct State {
 
     last_cursor_position: PhysicalPosition<f64>,
     mouse_pressed: bool,
+    weight: Weight,
 }
 
 impl State {
@@ -80,7 +81,7 @@ impl State {
             height: config.height as f32,
             width: config.width as f32,
             offset: PhysicalPosition { x: 0.0, y: 0.0 },
-            zoom: 1.0,
+            zoom: 0.0,
             weight: Weight {
                 top: 0.5,
                 left: 0.5,
@@ -142,6 +143,12 @@ impl State {
             circle_pipeline,
             last_cursor_position,
             mouse_pressed: false,
+            weight: Weight {
+                top: 0.5,
+                left: 0.5,
+                right: 0.5,
+                kjell: 0.5,
+            },
         }
     }
 
@@ -169,8 +176,9 @@ impl State {
             WindowEvent::MouseWheel { delta, .. } => {
                 match delta {
                     MouseScrollDelta::PixelDelta(PhysicalPosition { x: _, y }) => {
-                        self.camera.zoom += y.to_f32().unwrap() * 0.01;
-                        self.camera.zoom = self.camera.zoom.clamp(0.5, 10.0);
+                        self.camera.weight = self.weight;
+                        self.camera.zoom += y.to_f32().unwrap() * 0.002;
+                        self.camera.zoom = self.camera.zoom.clamp(-10.0, 1.0);
 
                         self.camera_uniform.update_view_proj(&self.camera);
                         self.queue.write_buffer(
@@ -200,6 +208,13 @@ impl State {
             }
 
             WindowEvent::CursorMoved { position, .. } => {
+                self.weight = Weight {
+                    top: position.y.to_f32().unwrap() / self.config.height as f32,
+                    left: position.x.to_f32().unwrap() / self.config.width as f32,
+                    right: 1.0 - position.x.to_f32().unwrap() / self.config.width as f32,
+                    kjell: 1.0 - position.y.to_f32().unwrap() / self.config.height as f32,
+                };
+
                 if self.mouse_pressed {
                     let difference: PhysicalPosition<f32> = PhysicalPosition {
                         x: self.last_cursor_position.x.to_f32().unwrap()
@@ -208,15 +223,8 @@ impl State {
                             - position.y.to_f32().unwrap(),
                     };
 
-                    self.camera.offset.x += difference.x;
-                    self.camera.offset.y += difference.y;
-
-                    // self.camera.weight = Weight {
-                    //     top: position.y.to_f32().unwrap() / self.config.height as f32,
-                    //     left: position.x.to_f32().unwrap() / self.config.width as f32,
-                    //     right: 1.0 - position.x.to_f32().unwrap() / self.config.width as f32,
-                    //     kjell: 1.0 - position.y.to_f32().unwrap() / self.config.height as f32,
-                    // };
+                    self.camera.offset.x += difference.x * (1.0 - self.camera.zoom);
+                    self.camera.offset.y += difference.y * (1.0 - self.camera.zoom);
 
                     self.camera_uniform.update_view_proj(&self.camera);
                     self.queue.write_buffer(
