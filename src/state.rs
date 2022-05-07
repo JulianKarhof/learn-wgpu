@@ -5,7 +5,7 @@ use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, MouseButton, MouseScrollDelta};
 use winit::{event::WindowEvent, window::Window};
 
-use crate::camera::{Camera, CameraUniform};
+use crate::camera::{Camera, CameraUniform, Limits};
 use crate::circle::CirclePipeline;
 use crate::rect::RectPipeline;
 
@@ -78,12 +78,15 @@ impl State {
         };
 
         let camera = Camera {
-            height: config.height as f32,
-            width: config.width as f32,
             offset: vec2(0.0, 0.0),
             zoom: 1.0,
             mouse_pos: vec2(0.0, 0.0),
-            limits: [0.0, config.width as f32, config.height as f32, 0.0],
+            limits: crate::camera::Limits {
+                left: 0.0,
+                right: config.width as f32,
+                bottom: config.height as f32,
+                top: 0.0,
+            },
         };
 
         let mut camera_uniform = CameraUniform::new();
@@ -144,16 +147,18 @@ impl State {
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
+            let width_diff: f32 = new_size.width as f32 - self.config.width as f32;
+            let height_diff: f32 = new_size.height as f32 - self.config.height as f32;
+
             self.size = new_size;
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
 
-            self.camera.height = new_size.height as f32;
-            self.camera.width = new_size.width as f32;
+            self.camera.limits.bottom += height_diff as f32 * self.camera.zoom;
+            self.camera.limits.right += width_diff as f32 * self.camera.zoom;
 
             self.camera_uniform.update_view_proj(&mut self.camera);
-
             self.queue.write_buffer(
                 &self.camera_buffer,
                 0,
@@ -167,24 +172,28 @@ impl State {
             WindowEvent::MouseWheel { delta, .. } => {
                 match delta {
                     MouseScrollDelta::PixelDelta(PhysicalPosition { x: _, y }) => {
-                        let left0 = self.camera.limits[0];
-                        let right0 = self.camera.limits[1];
-                        let bottom0 = self.camera.limits[2];
-                        let top0 = self.camera.limits[3];
-                        let w0 = self.camera_uniform.get_absolute_mouse_pos(&self.camera);
+                        let limits0 = &self.camera.limits;
+                        let w0 = self
+                            .camera_uniform
+                            .get_absolute_mouse_pos(&self.camera, self.size);
                         let zoom_factor0 = self.camera.zoom;
 
                         self.camera.zoom -= y.to_f32().unwrap() * 0.002;
-                        self.camera_uniform.update_view_proj(&mut self.camera);
+                        self.camera.zoom = self.camera.zoom.clamp(0.5, 10.0);
 
                         let zoom_factor_ratio = self.camera.zoom / zoom_factor0;
 
-                        let left = w0.x - (w0.x - left0) * zoom_factor_ratio;
-                        let right = w0.x - (w0.x - right0) * zoom_factor_ratio;
-                        let bottom = w0.y - (w0.y - bottom0) * zoom_factor_ratio;
-                        let top = w0.y - (w0.y - top0) * zoom_factor_ratio;
+                        let left = w0.x - (w0.x - limits0.left) * zoom_factor_ratio;
+                        let right = w0.x - (w0.x - limits0.right) * zoom_factor_ratio;
+                        let bottom = w0.y - (w0.y - limits0.bottom) * zoom_factor_ratio;
+                        let top = w0.y - (w0.y - limits0.top) * zoom_factor_ratio;
 
-                        self.camera.limits = [left, right, bottom, top];
+                        self.camera.limits = Limits {
+                            left,
+                            right,
+                            bottom,
+                            top,
+                        };
 
                         self.camera_uniform.update_view_proj(&mut self.camera);
                         self.queue.write_buffer(
@@ -225,10 +234,10 @@ impl State {
                             - position.y.to_f32().unwrap(),
                     };
 
-                    self.camera.limits[0] += difference.x * self.camera.zoom;
-                    self.camera.limits[1] += difference.x * self.camera.zoom;
-                    self.camera.limits[2] += difference.y * self.camera.zoom;
-                    self.camera.limits[3] += difference.y * self.camera.zoom;
+                    self.camera.limits.left += difference.x * self.camera.zoom;
+                    self.camera.limits.right += difference.x * self.camera.zoom;
+                    self.camera.limits.bottom += difference.y * self.camera.zoom;
+                    self.camera.limits.top += difference.y * self.camera.zoom;
 
                     self.camera_uniform.update_view_proj(&mut self.camera);
                     self.queue.write_buffer(
