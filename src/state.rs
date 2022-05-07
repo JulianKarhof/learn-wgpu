@@ -1,10 +1,11 @@
 use cgmath::num_traits::ToPrimitive;
+use cgmath::vec2;
 use wgpu::util::DeviceExt;
-use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, MouseButton, MouseScrollDelta};
 use winit::{event::WindowEvent, window::Window};
 
-use crate::camera::{Camera, CameraUniform, Weight};
+use crate::camera::{Camera, CameraUniform};
 use crate::circle::CirclePipeline;
 use crate::rect::RectPipeline;
 
@@ -27,7 +28,6 @@ pub struct State {
 
     last_cursor_position: PhysicalPosition<f64>,
     mouse_pressed: bool,
-    weight: Weight,
 }
 
 impl State {
@@ -80,14 +80,10 @@ impl State {
         let camera = Camera {
             height: config.height as f32,
             width: config.width as f32,
-            offset: PhysicalPosition { x: 0.0, y: 0.0 },
-            zoom: 0.0,
-            weight: Weight {
-                top: 0.5,
-                left: 0.5,
-                right: 0.5,
-                kjell: 0.5,
-            },
+            offset: vec2(0.0, 0.0),
+            zoom: 1.0,
+            mouse_pos: vec2(0.0, 0.0),
+            limits: [0.0, config.width as f32, config.height as f32, 0.0],
         };
 
         let mut camera_uniform = CameraUniform::new();
@@ -143,12 +139,6 @@ impl State {
             circle_pipeline,
             last_cursor_position,
             mouse_pressed: false,
-            weight: Weight {
-                top: 0.5,
-                left: 0.5,
-                right: 0.5,
-                kjell: 0.5,
-            },
         }
     }
 
@@ -162,7 +152,8 @@ impl State {
             self.camera.height = new_size.height as f32;
             self.camera.width = new_size.width as f32;
 
-            self.camera_uniform.update_view_proj(&self.camera);
+            self.camera_uniform.update_view_proj(&mut self.camera);
+
             self.queue.write_buffer(
                 &self.camera_buffer,
                 0,
@@ -176,11 +167,26 @@ impl State {
             WindowEvent::MouseWheel { delta, .. } => {
                 match delta {
                     MouseScrollDelta::PixelDelta(PhysicalPosition { x: _, y }) => {
-                        self.camera.weight = self.weight;
-                        self.camera.zoom += y.to_f32().unwrap() * 0.002;
-                        self.camera.zoom = self.camera.zoom.clamp(-10.0, 1.0);
+                        let left0 = self.camera.limits[0];
+                        let right0 = self.camera.limits[1];
+                        let bottom0 = self.camera.limits[2];
+                        let top0 = self.camera.limits[3];
+                        let w0 = self.camera_uniform.get_absolute_mouse_pos(&self.camera);
+                        let zoom_factor0 = self.camera.zoom;
 
-                        self.camera_uniform.update_view_proj(&self.camera);
+                        self.camera.zoom -= y.to_f32().unwrap() * 0.002;
+                        self.camera_uniform.update_view_proj(&mut self.camera);
+
+                        let zoom_factor_ratio = self.camera.zoom / zoom_factor0;
+
+                        let left = w0.x - (w0.x - left0) * zoom_factor_ratio;
+                        let right = w0.x - (w0.x - right0) * zoom_factor_ratio;
+                        let bottom = w0.y - (w0.y - bottom0) * zoom_factor_ratio;
+                        let top = w0.y - (w0.y - top0) * zoom_factor_ratio;
+
+                        self.camera.limits = [left, right, bottom, top];
+
+                        self.camera_uniform.update_view_proj(&mut self.camera);
                         self.queue.write_buffer(
                             &self.camera_buffer,
                             0,
@@ -208,12 +214,8 @@ impl State {
             }
 
             WindowEvent::CursorMoved { position, .. } => {
-                self.weight = Weight {
-                    top: position.y.to_f32().unwrap() / self.config.height as f32,
-                    left: position.x.to_f32().unwrap() / self.config.width as f32,
-                    right: 1.0 - position.x.to_f32().unwrap() / self.config.width as f32,
-                    kjell: 1.0 - position.y.to_f32().unwrap() / self.config.height as f32,
-                };
+                self.camera.mouse_pos =
+                    vec2(position.x.to_f32().unwrap(), position.y.to_f32().unwrap());
 
                 if self.mouse_pressed {
                     let difference: PhysicalPosition<f32> = PhysicalPosition {
@@ -223,10 +225,12 @@ impl State {
                             - position.y.to_f32().unwrap(),
                     };
 
-                    self.camera.offset.x += difference.x * (1.0 - self.camera.zoom);
-                    self.camera.offset.y += difference.y * (1.0 - self.camera.zoom);
+                    self.camera.limits[0] += difference.x * self.camera.zoom;
+                    self.camera.limits[1] += difference.x * self.camera.zoom;
+                    self.camera.limits[2] += difference.y * self.camera.zoom;
+                    self.camera.limits[3] += difference.y * self.camera.zoom;
 
-                    self.camera_uniform.update_view_proj(&self.camera);
+                    self.camera_uniform.update_view_proj(&mut self.camera);
                     self.queue.write_buffer(
                         &self.camera_buffer,
                         0,
