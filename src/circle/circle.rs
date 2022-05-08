@@ -17,7 +17,7 @@ impl Default for Circle {
             color: [1.0, 1.0, 1.0, 1.0],
             radius: 50.0,
             border: 0.0,
-            border_color: [0.0, 0.0, 0.0, 1.0],
+            border_color: [1.0; 4],
         }
     }
 }
