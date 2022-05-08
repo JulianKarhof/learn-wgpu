@@ -2,6 +2,8 @@ struct InstanceInput {
     [[location(1)]] position: vec2<f32>;
     [[location(2)]] color: vec4<f32>;
     [[location(3)]] radius: f32;
+    [[location(4)]] border: f32;
+    [[location(5)]] border_color: vec4<f32>;
 };
 
 struct CameraUniform {
@@ -19,6 +21,8 @@ struct VertexOutput {
     [[builtin(position)]] clip_position: vec4<f32>;
     [[location(0)]] color: vec4<f32>;
     [[location(1)]] local: vec2<f32>;
+    [[location(2)]] border: f32;
+    [[location(3)]] border_color: vec4<f32>;
 };
 
 [[stage(vertex)]]
@@ -37,18 +41,24 @@ fn vs_main(
     out.clip_position = camera.view_proj * transform * vec4<f32>(model.v_position, 0.0, 1.0);
     out.color = instance.color;
     out.local = model.v_position;
+    out.border = instance.border;
+    out.border_color = instance.border_color;
     return out;
 }
 
 [[stage(fragment)]]
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+    var color = in.color;
     let R = 1.0; 
+    let BR = R - in.border;
+
     let dist = sqrt(dot(in.local, in.local)); 
     
     if (dist > R) { discard; }
+    if (dist > BR) { color = in.border_color; }
 
     let sm = smoothStep(R, R - 0.01, dist);
 
-    return vec4<f32>(in.color.xyz, in.color.w * sm);
+    return vec4<f32>(color.xyz, color.w * sm);
 }
  
