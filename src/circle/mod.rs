@@ -124,7 +124,7 @@ impl<'a> CirclePipeline {
                 let mut circle = Circle::default();
                 circle.position = [220.0 * x as f32, 420.0];
                 circle.color = [0.0, 1.0, 0.0, 1.0];
-                circle.border = 0.1;
+                circle.border = 5.0;
                 return circle;
             })
             .collect::<Vec<_>>();

@@ -124,8 +124,8 @@ impl<'a> RectPipeline {
                 let mut rect = Rect::default();
                 rect.position = [220.0 * x as f32, 200.0];
                 rect.color = [0.0, 1.0, 0.0, 1.0];
-                rect.border = 0.0;
-                rect.border_radius = [5.0; 4];
+                rect.border = 5.0;
+                rect.border_radius = [20.0; 4];
                 return rect;
             })
             .collect::<Vec<_>>();

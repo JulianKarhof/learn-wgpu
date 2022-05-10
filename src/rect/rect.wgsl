@@ -80,13 +80,6 @@ fn distance_alg(
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     var color = in.color;
     let aspect = in.size.x / in.size.y; 
-
-    let maxX = 1.0 - in.border_width;
-    let minX = -1.0 + in.border_width;
-    let minY = -1.0 + in.border_width * aspect;
-    let maxY = 1.0 - in.border_width * aspect;
-
-    if (in.position.x > maxX || in.position.x < minX || in.position.y < minY || in.position.y > maxY) { color = in.border_color; }
     
     let norm_pos = (in.position + 1.0) / 2.0;
     let border_radius = in.border_radius[in.index];
@@ -98,6 +91,17 @@ fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
         in.size,
         border_radius,
     );
+
+    if (in.border_width > 0.0) {
+      var internal_border: f32 = max(
+          in.border_radius.x - in.border_width,
+          0.0
+      );
+
+      if (dist > internal_border) {
+          color = in.border_color;
+      }
+    }
 
     var radius_alpha: f32 = 1.0 - smoothStep(
         max(border_radius - 0.2, 0.0),

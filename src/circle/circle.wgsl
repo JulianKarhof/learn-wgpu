@@ -23,6 +23,7 @@ struct VertexOutput {
     [[location(1)]] local: vec2<f32>;
     [[location(2)]] border: f32;
     [[location(3)]] border_color: vec4<f32>;
+    [[location(4)]] radius: f32;
 };
 
 [[stage(vertex)]]
@@ -43,6 +44,7 @@ fn vs_main(
     out.local = model.v_position;
     out.border = instance.border;
     out.border_color = instance.border_color;
+    out.radius = instance.radius;
     return out;
 }
 
@@ -50,12 +52,13 @@ fn vs_main(
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     var color = in.color;
     let R = 1.0; 
-    let BR = R - in.border;
+    let BR = in.radius - in.border;
 
     let dist = length(in.local); 
+    let borderDist = length(in.local * in.radius); 
     
     if (dist > R) { discard; }
-    if (dist > BR) { color = in.border_color; }
+    if (borderDist > BR) { color = in.border_color; }
 
     let sm = smoothStep(R, R - 0.01, dist);
 
