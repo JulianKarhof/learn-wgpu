@@ -52,7 +52,7 @@ fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     let R = 1.0; 
     let BR = R - in.border;
 
-    let dist = sqrt(dot(in.local, in.local)); 
+    let dist = length(in.local); 
     
     if (dist > R) { discard; }
     if (dist > BR) { color = in.border_color; }
