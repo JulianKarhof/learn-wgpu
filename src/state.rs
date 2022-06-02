@@ -1,5 +1,6 @@
 use cgmath::num_traits::ToPrimitive;
 use cgmath::vec2;
+use rand::prelude::*;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, MouseButton, MouseScrollDelta};
@@ -7,7 +8,7 @@ use winit::{event::WindowEvent, window::Window};
 
 use crate::camera::{Camera, CameraUniform, Limits};
 use crate::circle::CirclePipeline;
-use crate::rect::RectPipeline;
+use crate::rect::{Rect, RectPipeline};
 
 pub struct State {
     surface: wgpu::Surface,
@@ -25,6 +26,8 @@ pub struct State {
 
     rect_pipeline: RectPipeline,
     circle_pipeline: CirclePipeline,
+
+    rect_instances: Vec<Rect>,
 
     last_cursor_position: PhysicalPosition<f64>,
     mouse_pressed: bool,
@@ -122,8 +125,17 @@ impl State {
             label: Some("camera_bind_group"),
         });
 
-        let rect_pipeline = RectPipeline::new(&device, &camera_bind_group_layout, &config);
+        let mut rect_pipeline = RectPipeline::new(&device, &camera_bind_group_layout, &config);
         let circle_pipeline = CirclePipeline::new(&device, &camera_bind_group_layout, &config);
+
+        let mut rect_instances = Vec::<Rect>::new();
+        rect_instances.push(Rect::default());
+        rect_instances.push(Rect {
+            position: [500.0, 69.0],
+            ..Default::default()
+        });
+
+        rect_pipeline.update(&device, &rect_instances);
 
         let last_cursor_position = PhysicalPosition::new(0.0, 0.0);
 
@@ -140,6 +152,7 @@ impl State {
             camera_uniform,
             rect_pipeline,
             circle_pipeline,
+            rect_instances,
             last_cursor_position,
             mouse_pressed: false,
         }
@@ -212,6 +225,21 @@ impl State {
                 if *button == MouseButton::Left {
                     if *state == ElementState::Released {
                         self.mouse_pressed = false;
+
+                        let mut rng = rand::thread_rng();
+                        let posx: f32 = rng.gen();
+                        let posy: f32 = rng.gen();
+
+                        self.rect_instances.push(Rect {
+                            position: [
+                                posx * self.size.width as f32,
+                                posy * self.size.height as f32,
+                            ],
+                            ..Default::default()
+                        });
+
+                        self.rect_pipeline
+                            .update(&self.device, &self.rect_instances);
                     }
 
                     if *state == ElementState::Pressed {

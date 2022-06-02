@@ -7,7 +7,7 @@ pub use rect::Rect;
 
 pub struct RectPipeline {
     render_pipeline: RenderPipeline,
-    instances: Vec<Rect>,
+    instances_len: u32,
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     instance_buffer: Buffer,
@@ -119,17 +119,7 @@ impl<'a> RectPipeline {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        let instances = (0..10)
-            .map(move |x| {
-                let mut rect = Rect::default();
-                rect.position = [220.0 * x as f32, 200.0];
-                rect.color = [0.0, 1.0, 0.0, 1.0];
-                rect.border = 5.0;
-                rect.border_radius = [20.0; 4];
-                return rect;
-            })
-            .collect::<Vec<_>>();
-
+        let instances = Vec::<Rect>::new();
         let instance_data = instances.as_slice();
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Rect Instance Buffer"),
@@ -139,11 +129,22 @@ impl<'a> RectPipeline {
 
         Self {
             render_pipeline,
-            instances,
+            instances_len: instances.len() as u32,
             vertex_buffer,
             index_buffer,
             instance_buffer,
         }
+    }
+
+    pub fn update(&mut self, device: &Device, instances: &Vec<Rect>) {
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Rect Instance Buffer"),
+            contents: bytemuck::cast_slice(&instances.as_slice()),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        self.instances_len = instances.len() as u32;
+        self.instance_buffer = instance_buffer;
     }
 
     pub fn render(&'a self, render_pass: &mut RenderPass<'a>, camera_bind_group: &'a BindGroup) {
@@ -152,10 +153,11 @@ impl<'a> RectPipeline {
 
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
         let index_amount = INDICES.len() as u32;
-        let instance_amount = self.instances.len() as u32;
+        let instance_amount = self.instances_len;
 
         render_pass.draw_indexed(0..index_amount, 0, 0..instance_amount);
     }
