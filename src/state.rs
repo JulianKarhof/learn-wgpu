@@ -129,13 +129,7 @@ impl State {
         let circle_pipeline = CirclePipeline::new(&device, &camera_bind_group_layout, &config);
 
         let mut rect_instances = Vec::<Rect>::new();
-        rect_instances.push(Rect::default());
-        rect_instances.push(Rect {
-            position: [500.0, 69.0],
-            ..Default::default()
-        });
-
-        rect_pipeline.update(&device, &rect_instances);
+        rect_pipeline.push(Rect::default());
 
         let last_cursor_position = PhysicalPosition::new(0.0, 0.0);
 
@@ -230,16 +224,16 @@ impl State {
                         let posx: f32 = rng.gen();
                         let posy: f32 = rng.gen();
 
-                        self.rect_instances.push(Rect {
-                            position: [
-                                posx * self.size.width as f32,
-                                posy * self.size.height as f32,
-                            ],
-                            ..Default::default()
-                        });
-
-                        self.rect_pipeline
-                            .update(&self.device, &self.rect_instances);
+                        self.rect_pipeline.push(
+                            Rect {
+                                position: [
+                                    posx * self.size.width as f32,
+                                    posy * self.size.height as f32,
+                                ],
+                                ..Default::default()
+                            },
+                            &self.device,
+                        );
                     }
 
                     if *state == ElementState::Pressed {

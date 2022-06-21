@@ -7,7 +7,7 @@ pub use rect::Rect;
 
 pub struct RectPipeline {
     render_pipeline: RenderPipeline,
-    instances_len: u32,
+    instances: Vec<Rect>,
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     instance_buffer: Buffer,
@@ -129,21 +129,23 @@ impl<'a> RectPipeline {
 
         Self {
             render_pipeline,
-            instances_len: instances.len() as u32,
+            instances,
             vertex_buffer,
             index_buffer,
             instance_buffer,
         }
     }
 
-    pub fn update(&mut self, device: &Device, instances: &Vec<Rect>) {
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Rect Instance Buffer"),
-            contents: bytemuck::cast_slice(&instances.as_slice()),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
+    pub fn push(&mut self, instance: Rect) {
+        self.instances.push(instance);
 
-        self.instances_len = instances.len() as u32;
+        let instance_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Rect Instance Buffer"),
+                contents: bytemuck::cast_slice(&self.instances.as_slice()),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
         self.instance_buffer = instance_buffer;
     }
 
@@ -157,7 +159,7 @@ impl<'a> RectPipeline {
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
         let index_amount = INDICES.len() as u32;
-        let instance_amount = self.instances_len;
+        let instance_amount = self.instances.len() as u32;
 
         render_pass.draw_indexed(0..index_amount, 0, 0..instance_amount);
     }
