@@ -128,8 +128,8 @@ impl State {
         let mut rect_pipeline = RectPipeline::new(&device, &camera_bind_group_layout, &config);
         let circle_pipeline = CirclePipeline::new(&device, &camera_bind_group_layout, &config);
 
-        let mut rect_instances = Vec::<Rect>::new();
-        rect_pipeline.push(Rect::default());
+        let rect_instances = Vec::<Rect>::new();
+        rect_pipeline.push(Rect::default(), &device);
 
         let last_cursor_position = PhysicalPosition::new(0.0, 0.0);
 

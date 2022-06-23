@@ -136,16 +136,14 @@ impl<'a> RectPipeline {
         }
     }
 
-    pub fn push(&mut self, instance: Rect) {
+    pub fn push(&mut self, instance: Rect, device: &Device) {
         self.instances.push(instance);
 
-        let instance_buffer = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Rect Instance Buffer"),
-                contents: bytemuck::cast_slice(&self.instances.as_slice()),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Rect Instance Buffer"),
+            contents: bytemuck::cast_slice(&self.instances.as_slice()),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
         self.instance_buffer = instance_buffer;
     }
 
