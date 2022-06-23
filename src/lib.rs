@@ -7,6 +7,7 @@ use winit::{
 mod camera;
 mod circle;
 mod instance;
+mod line;
 mod rect;
 mod state;
 
