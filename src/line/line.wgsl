@@ -31,18 +31,27 @@ fn vs_main(
     model: VertexInput,
     instance: InstanceInput
 ) -> VertexOutput {
-    let transform: mat4x4<f32> = mat4x4<f32>(
-        vec4<f32>(instance.size.x, 0.0, 0.0, 0.0),
-        vec4<f32>(0.0, instance.size.y, 0.0, 0.0),
-        vec4<f32>(0.0, 0.0, 1.0, 0.0),
-        vec4<f32>(instance.position, 0.0, 1.0),
+    var out: VertexOutput;
+
+    let line_vector: vec2<f32> = vec2<f32>(
+        instance.position2.x - instance.position1.y,
+        instane.position2.x - instance.position1.y
     );
 
-    var out: VertexOutput;
-    out.clip_position = camera.view_proj * instance.position * vec4<f32>(model.v_position, 0.0, 1.0);
+    var normal_vector: vec2<f32>;
+    if (model.index < 2) {
+        normal_vector = normalize(vec2<f32>(-line_vector.y, line_vector.x));
+    } else {
+        normal_vector = normalize(vec2<f32>(line_vector.y, -line_vector.x));
+    }
+
+    let delta: vec4<f32> = vec4(normal_vector * instance.thiccness, 0.0, 0.0);
+    // TODO: model.v_position is not at the instance position?
+    out.clip_position = camera.view_proj * (vec4<f32>(model.v_position, 0.0, 1.0) + delta);
     out.color = instance.color;
     out.thiccness = instance.thiccness;
-    out.position = model.v_position;
+    out.position1 = model.v_position; // ?
+    out.position2 = model.v_position; // ?
     out.index = model.index;
     return out;
 }
