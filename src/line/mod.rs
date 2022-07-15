@@ -119,7 +119,14 @@ impl<'a> LinePipeline {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        let instances = Vec::<Line>::new();
+        let mut instances = Vec::<Line>::new();
+        instances.push(Line {
+            position1: [220.0, 420.0],
+            position2: [2200.0, 420.0],
+            color: [1.0, 0.0, 1.0, 1.0],
+            thiccness: 100.0,
+        });
+
         let instance_data = instances.as_slice();
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Line Instance Buffer"),

@@ -8,6 +8,7 @@ use winit::{event::WindowEvent, window::Window};
 
 use crate::camera::{Camera, CameraUniform, Limits};
 use crate::circle::CirclePipeline;
+use crate::line::LinePipeline;
 use crate::rect::{Rect, RectPipeline};
 
 pub struct State {
@@ -26,6 +27,7 @@ pub struct State {
 
     rect_pipeline: RectPipeline,
     circle_pipeline: CirclePipeline,
+    line_pipeline: LinePipeline,
 
     rect_instances: Vec<Rect>,
 
@@ -127,6 +129,7 @@ impl State {
 
         let mut rect_pipeline = RectPipeline::new(&device, &camera_bind_group_layout, &config);
         let circle_pipeline = CirclePipeline::new(&device, &camera_bind_group_layout, &config);
+        let line_pipeline = LinePipeline::new(&device, &camera_bind_group_layout, &config);
 
         let rect_instances = Vec::<Rect>::new();
         rect_pipeline.push(Rect::default(), &device);
@@ -146,6 +149,7 @@ impl State {
             camera_uniform,
             rect_pipeline,
             circle_pipeline,
+            line_pipeline,
             rect_instances,
             last_cursor_position,
             mouse_pressed: false,
@@ -316,6 +320,9 @@ impl State {
             .render(&mut render_pass, &self.camera_bind_group);
 
         self.circle_pipeline
+            .render(&mut render_pass, &self.camera_bind_group);
+
+        self.line_pipeline
             .render(&mut render_pass, &self.camera_bind_group);
 
         drop(render_pass);

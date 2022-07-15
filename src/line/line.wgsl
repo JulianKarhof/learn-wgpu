@@ -1,6 +1,6 @@
 struct InstanceInput {
     [[location(1)]] position1: vec2<f32>;
-    [[location(1)]] position2: vec2<f32>;
+    [[location(2)]] position2: vec2<f32>;
     [[location(3)]] color: vec4<f32>;
     [[location(4)]] thiccness: f32;
 };
@@ -18,11 +18,11 @@ struct VertexInput {
 };
 
 struct VertexOutput {
-    [[builtin(position)]] clip_position1: vec4<f32>;
+    [[builtin(position)]] clip_position: vec4<f32>;
     [[location(0)]] color: vec4<f32>;
     [[location(1)]] thiccness: f32;
-    [[location(2)]] position1: vec2<f32>;
-    [[location(3)]] position2: vec2<f32>;
+    [[location(2)]] line_position1: vec2<f32>;
+    [[location(3)]] line_position2: vec2<f32>;
     [[location(4)]] index: u32;
 };
 
@@ -35,23 +35,23 @@ fn vs_main(
 
     let line_vector: vec2<f32> = vec2<f32>(
         instance.position2.x - instance.position1.y,
-        instane.position2.x - instance.position1.y
+        instance.position2.x - instance.position1.y
     );
 
     var normal_vector: vec2<f32>;
-    if (model.index < 2) {
+    if (i32(model.index) < 2) {
         normal_vector = normalize(vec2<f32>(-line_vector.y, line_vector.x));
     } else {
         normal_vector = normalize(vec2<f32>(line_vector.y, -line_vector.x));
     }
 
-    let delta: vec4<f32> = vec4(normal_vector * instance.thiccness, 0.0, 0.0);
+    let delta: vec4<f32> = vec4<f32>(normal_vector * instance.thiccness, 0.0, 0.0);
     // TODO: model.v_position is not at the instance position?
     out.clip_position = camera.view_proj * (vec4<f32>(model.v_position, 0.0, 1.0) + delta);
     out.color = instance.color;
     out.thiccness = instance.thiccness;
-    out.position1 = model.v_position; // ?
-    out.position2 = model.v_position; // ?
+    out.line_position1 = instance.position1;
+    out.line_position2 = instance.position2;
     out.index = model.index;
     return out;
 }
